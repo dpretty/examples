@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <style>
+    
+    body {
+      font: 10px sans-serif;
+    }
+    
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    
+    .line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 1.5px;
+    }
+
+    a {
+      color: green;
+    }
+    
+  </style>
+  <body>
+    <header>
+      <h1>Browser History</h1>
+      <p>Using pushstate and popstate to update a graph.</p>
+    </header>
+    <p><a href="">Click here for next page.</a> Use browser back button to go back.</p>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script>
+
+
+      var margin = {top: 20, right: 20, bottom: 30, left: 50},
+          width = 960 - margin.left - margin.right,
+          height = 500 - margin.top - margin.bottom;
+
+      var dataLength = 100;
+      
+      var svg = d3.select("body").append("svg")
+           .attr("width", width + margin.left + margin.right)
+           .attr("height", height + margin.top + margin.bottom)
+         .append("g")
+           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      var x = d3.scale.linear().range([0, width]),
+          y = d3.scale.linear().range([height, 0]);
+
+      var xAxis = d3.svg.axis().scale(x).orient("bottom"),
+          yAxis = d3.svg.axis().scale(y).orient("left");
+
+      svg.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis);
+
+      svg.append("g")
+          .attr("class", "y axis")
+          .call(yAxis);
+
+      var line = d3.svg.line()
+          .x(function(d) { return x(d[0]); })
+          .y(function(d) { return y(d[1]); });
+
+      var getData = function(length) {  
+          return d3.zip(d3.range(0,1,1/length), d3.shuffle(d3.range(0,1, 1/length)));
+      }
+
+      var data = getData(dataLength);
+
+      
+      function update(data) {
+      var path = svg.selectAll("path.line").data([data]);
+
+      
+      path.enter().append("path")
+      .attr("class", "line")
+      .attr("d", line);
+
+      path.transition()
+      .attr("d", line);
+
+      path.exit().remove();
+          
+      }
+
+      update(data);
+
+      function manageState() {
+        d3.selectAll("p a").on("click", function() {
+          d3.event.preventDefault();
+          var newData = getData(dataLength);
+          var newFakePage = "page_" + parseInt(Math.random()*1e16) + ".html";
+          window.history.pushState(newData, null, newFakePage);
+          update(newData);
+        });
+      }
+      
+      manageState();
+
+      window.addEventListener("popstate", function(e) {
+      if (e.state == null) {
+         // ...
+      } else {
+         update(e.state);
+      }
+});
+
+
+    </script>
+  </body>
+</html>
