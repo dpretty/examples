@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+    <style>
+    
+    body {
+      font: 10px sans-serif;
+    }
+    
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    
+    .line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 1.5px;
+    }
+
+    a {
+      color: green;
+    }
+    
+  </style>
+  <body>
+    <header>
+      <h1>Browser History</h1>
+      <p>Using pushstate and popstate to update a graph using d3.chart.</p>
+    </header>
+    <p><a href="">Click here for next page.</a> Use browser back button to go back.</p>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="d3.chart.min.js" charset="utf-8"></script>
+    <script>
+    
+d3.chart("TestChart", {
+    initialize: function() {
+	
+	chart = this;
+	chart.margin = {top: 20, right: 20, bottom: 30, left: 50};
+	
+        chart._width = 960 - chart.margin.left - chart.margin.right;
+        chart._height = 500 - chart.margin.top - chart.margin.bottom;
+	
+	
+	chart.x = d3.scale.linear().range([0, chart._width]);
+        chart.y = d3.scale.linear().range([chart._height, 0]);
+	
+	chart.xAxis = d3.svg.axis().scale(chart.x).orient("bottom");
+        chart.yAxis = d3.svg.axis().scale(chart.y).orient("left");
+	
+	chart.axes = chart.base.append("g");
+	
+	chart.axes.append("g")
+	    .attr("class", "x axis")
+	    .attr("transform", "translate(0," + chart._height + ")")
+	    .call(chart.xAxis);
+	
+	chart.axes.append("g")
+	    .attr("class", "y axis")
+	    .call(chart.yAxis);
+	
+	
+	var line = d3.svg.line()
+	    .x(function(d) { return chart.x(d[0]); })
+	    .y(function(d) { return chart.y(d[1]); });
+	
+	
+	this.layer("data", chart.base, {
+	    dataBind: function(data) {
+		return this.selectAll("path.data").data([data]);
+	    },
+	    insert: function() {
+		return this.insert("path")
+		    .attr("class", "data line");
+	    },
+	    events: {
+		"enter": function() {
+		    return this.attr("d", line);
+		},
+		"update": function() {
+		    return this.transition()
+			.attr("d", line);
+		},
+		"exit": function() {
+		    return this.remove();
+		}
+	    }
+	});
+	
+	
+    },
+    width: function(newWidth) {
+	// for external calls, we care about the total width (incl margins)
+	// internally we use the margin convention http://bl.ocks.org/mbostock/3019563
+	// to avoid too much confusion, we use _width internally rather than have 
+	// different values from width property and width() method
+	if (!arguments.length) {
+	    return this._width + this.margin.left + this.margin.right; 
+	}
+	
+	this._width = newWidth - this.margin.left - this.margin.right;
+	
+	chart.x.range([0, this._width]);
+	
+	return this;	
+    },
+    height: function(newHeight) {
+	// see notes for width method
+	if (!arguments.length) {
+	    return this._height + this.margin.top + this.margin.bottom;
+	}
+	
+	this._height = newHeight - this.margin.top - this.margin.bottom;
+	
+        chart.y.range([this._height, 0]);
+	
+	return this;	
+    }
+    
+    
+});
+
+
+var getData = function(length) {  
+    return d3.zip(d3.range(0,1,1/length), d3.shuffle(d3.range(0,1, 1/length)));
+}
+
+
+var svg = d3.select("body").append("svg")
+    .attr("width", 800)
+    .attr("height", 600);
+
+
+var dataLength = 100;
+var data = getData(dataLength);
+var plot = svg.chart("TestChart");
+plot.draw(data);
+
+function manageState() {
+    d3.selectAll("p a").on("click", function() {
+        d3.event.preventDefault();
+        var newData = getData(dataLength);
+        var newFakePage = "page_" + parseInt(Math.random()*1e16) + ".html";
+        window.history.pushState(newData, null, newFakePage);
+        plot.draw(newData);
+    });
+}
+
+manageState();
+
+window.addEventListener("popstate", function(e) {
+    if (e.state == null) {
+        // ...
+    } else {
+        plot.draw(e.state);
+    }
+});
+
+
+    </script>
+  </body>
+</html>
